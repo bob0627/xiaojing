@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地图任务 Agent · v1</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🧭%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="page-title">
+    <h1>地图任务 Agent · v1</h1>
+    <p>百度地图开发者大赛 · 演示：上海出差 · 数据来自百度地图 Web 服务 API；缺 Key 或百度报错时自动换成<b>示例数据</b>并标出</p>
+  </header>
+
+  <nav class="step-bar" id="stepBar">
+    <button class="step-btn" data-step="1">1 首页</button>
+    <button class="step-btn" data-step="2">2 任务理解</button>
+    <button class="step-btn" data-step="3">3 过程可见</button>
+    <button class="step-btn" data-step="4">4 酒店对比</button>
+    <button class="step-btn" data-step="5">5 任务雷达</button>
+    <button class="step-btn" data-step="6">6 计划总览</button>
+    <button class="step-btn" data-step="7">7 时间轴</button>
+    <button class="step-btn" data-step="8">8 变更审批</button>
+  </nav>
+
+  <div class="phone-wrap" id="phoneWrap">
+  <div class="phone" id="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="icons">
+        <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="#111"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#111"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#111"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#111"/></svg>
+        <svg viewBox="0 0 24 12"><rect x="0.5" y="0.5" width="20" height="11" rx="3" fill="none" stroke="#111"/><rect x="2" y="2" width="15" height="8" rx="2" fill="#111"/><rect x="21.5" y="4" width="2" height="4" rx="1" fill="#111"/></svg>
+      </span>
+    </div>
+
+    <div class="app-header">
+      <button class="menu-btn" id="logBtn" aria-label="调用日志" title="调用日志">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 5.5h10M3 10.5h10" stroke="#222" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="avatar-wrap">
+        <div class="avatar" id="avatar"><span class="face">🧭</span><span class="pulse"></span></div>
+        <div class="avatar-name">小径 <span style="font-weight:500;color:#9AA3AD;font-size:11px">· 地图任务助手</span> <span class="data-badge" id="dataBadge" title="">示例数据</span></div>
+        <div class="status-line" id="statusLine">在线</div>
+      </div>
+      <button class="invite-btn" id="planBtn" title="我的计划">📋 计划</button>
+    </div>
+
+    <main class="screens" id="screens">
+
+      <!-- 1 HOME -->
+      <section class="screen" data-screen="1">
+        <div class="scroll" id="s1scroll">
+          <div style="text-align:center;margin:18px 0 10px">
+            <div style="font-size:22px;font-weight:800;letter-spacing:.01em">这次要我替你办什么？</div>
+            <div style="font-size:13px;color:#6B7280;margin-top:6px">说一句目标，我用百度地图数据帮你选酒店、排日程、找地方</div>
+          </div>
+
+          <div class="card" style="background:linear-gradient(135deg,#F0F8FF,#FFFFFF)">
+            <div class="card-title">🧠 我记得你的习惯 <span class="tag">默认值</span></div>
+            <div class="chips" style="margin:0">
+              <span class="pill">酒店评分 ≥ 4.3</span>
+              <span class="pill">单程通勤 ≤ 60 分钟</span>
+              <span class="pill green">2km 内步行</span>
+              <span class="pill green">远了打车</span>
+              <span class="pill orange">客户前留 10 分钟</span>
+            </div>
+          </div>
+
+          <div style="font-size:12px;color:#6B7280;margin:14px 2px 2px;font-weight:600">试试这样说</div>
+          <div class="chips" id="homeChips"></div>
+
+          <div class="card" style="margin-top:16px" id="recentTasks">
+            <div class="card-title">🗂 最近的任务 <span class="tag">点卡片打开计划</span></div>
+            <div id="recentList"></div>
+          </div>
+
+          <div class="card" id="keyCard">
+            <div class="card-title">🔌 数据来源 <span class="tag" id="keyTag">检测中</span></div>
+            <div id="keyList" class="key-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 TASK UNDERSTANDING -->
+      <section class="screen" data-screen="2">
+        <div class="scroll" id="s2scroll">
+          <div class="bubble user" id="s2user"></div>
+          <div class="bubble" id="s2intro">正在理解你的任务…</div>
+          <div class="card task-card">
+            <div class="card-title">📋 我理解的任务 <span class="tag" id="s2tag"></span></div>
+            <div id="slotBox" class="slot-box"></div>
+            <div id="taskList"></div>
+            <div id="assumeList" class="assume"></div>
+            <div class="task-actions">
+              <div class="ask-row" id="askRow"></div>
+              <div class="primary-row">
+                <button class="btn ghost" id="s2edit">再改改</button>
+                <button class="btn primary" id="s2go">确认，开始安排</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 PROCESS -->
+      <section class="screen" data-screen="3">
+        <div class="scroll" id="s3scroll">
+          <div class="bubble user">确认，开始安排</div>
+          <div class="card" style="padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+              <span class="check on" style="width:18px;height:18px"></span>
+              <b style="white-space:nowrap">已确认</b><span id="s3sum" style="color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+            </div>
+          </div>
+          <div class="bubble" id="s3bubble">开始查了，每一步都是真实的接口调用，你可以随时打断。</div>
+          <div class="card">
+            <div class="card-title">⚙️ 小径正在做 <span class="tag" id="procCount">0</span></div>
+            <div class="activity" id="activity"></div>
+            <div class="progress" id="procBar"><i></i></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+              <span style="font-size:11px;color:#9AA3AD;margin-right:8px" id="procSrc">数据源：百度地图 地理编码 / 地点检索 / 批量算路 / 路线规划</span>
+              <button class="ask-btn" id="s3skip" style="padding:5px 10px;white-space:nowrap;flex-shrink:0">看结果 →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 HOTELS -->
+      <section class="screen" data-screen="4">
+        <div class="scroll" id="s4scroll">
+          <div class="bubble" id="hotelIntro"></div>
+          <div class="map-pane mini" id="hotelMap"><span class="sample-badge map-badge"></span></div>
+          <div class="hotel-scroll" id="hotelScroll"></div>
+          <div class="hint" id="hotelHint">← 左右滑动比较 · 通勤来自百度批量算路</div>
+          <div class="card" style="padding:12px 14px" id="compareCard">
+            <div class="card-title" style="margin-bottom:6px">⚖️ 一句话对比</div>
+            <div id="compareText" style="font-size:13px;line-height:1.55;color:#333"></div>
+            <div id="rejectText" style="font-size:11px;color:#9AA3AD;margin-top:6px;line-height:1.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 RADAR -->
+      <section class="screen" data-screen="5">
+        <div class="map-pane" id="radarMap">
+          <span class="sample-badge map-badge" style="top:50px"></span>
+          <div class="cat-pills" id="catPills" style="position:absolute;top:10px;left:10px;right:10px;z-index:3"></div>
+          <div class="map-controls">
+            <div class="radius-bar">
+              <div class="row">
+                <span class="lab">以 <b id="centerName">酒店</b> 为圆心</span>
+                <span class="count" id="radarCount"></span>
+              </div>
+              <div class="radius-pills" id="radiusPills">
+                <button data-r="1">1 km</button>
+                <button data-r="2" class="on">2 km</button>
+                <button data-r="3">3 km</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="poi-sheet">
+          <div class="drawer-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <b style="font-size:14px" id="poiTitle"></b>
+            <button class="ask-btn" id="s5next" style="padding:5px 10px;white-space:nowrap">生成计划总览 →</button>
+          </div>
+          <div id="poiList"></div>
+        </div>
+      </section>
+
+      <!-- 6 PLAN OVERVIEW -->
+      <section class="screen" data-screen="6">
+        <div class="map-pane" id="overviewMap" style="height:38%;min-height:220px">
+          <span class="sample-badge map-badge"></span>
+        </div>
+        <div class="scroll" id="ovScroll" style="padding-top:4px">
+          <div class="card" style="margin-top:0">
+            <div class="card-title" id="ovTitle">🧳 出差计划</div>
+            <div style="font-size:12px;color:#6B7280;line-height:1.5" id="ovSub"></div>
+            <div style="font-size:12px;margin-top:8px;font-weight:650;color:#444">目标清单</div>
+            <div id="gapBox"></div>
+            <div id="goalList" class="goal-list"></div>
+          </div>
+          <div style="font-size:12px;color:#6B7280;font-weight:650;margin:4px 2px 2px">按天查看 · 点一天打开时间轴</div>
+          <div id="dayCards"></div>
+          <div class="primary-row" style="margin-top:8px">
+            <button class="btn ghost" id="ovEdit">改任务</button>
+            <button class="btn ghost" id="ovChange">改一处 →</button>
+          </div>
+          <button class="btn primary" id="ovOpen" style="width:100%;margin-top:8px">打开时间轴</button>
+          <div class="hint">也可以从首页「最近的任务」或顶部「📋 计划」回到这里</div>
+        </div>
+      </section>
+
+      <!-- 7 ITINERARY -->
+      <section class="screen" data-screen="7">
+        <div class="map-pane" id="routeMap" style="height:40%;min-height:240px">
+          <span class="sample-badge map-badge"></span>
+        </div>
+        <div class="day-pills" id="dayPills"></div>
+        <div class="drawer" id="drawer">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <div id="daySummary" style="font-size:12px;color:#6B7280"></div>
+            <button class="opt-fab" id="optBtn">✨ 一键优化</button>
+          </div>
+          <div id="timeline"></div>
+          <div class="hint">按住 ≡ 拖动排序，交通和时间由编排器按批量算路结果重算</div>
+        </div>
+      </section>
+
+      <!-- 8 APPROVAL -->
+      <section class="screen" data-screen="8">
+        <div class="scroll" id="s8scroll">
+          <div class="card" style="padding:10px 14px">
+            <div style="font-size:12px;color:#6B7280" id="s8dayLab">📍 当前时间轴</div>
+            <div style="font-size:13px;margin-top:4px;line-height:1.6" id="s8chain"></div>
+          </div>
+          <div class="chips" id="s8presets" style="margin-top:0"></div>
+          <div id="s8thread"></div>
+          <div class="card" id="approvalCard" style="display:none">
+            <div class="card-title">🔁 变更审批 <span class="tag" id="s8tag"></span></div>
+            <div style="font-size:12px;color:#6B7280;line-height:1.5" id="s8rule"></div>
+            <div class="map-pane mini" id="changeMap" style="margin-top:8px"><span class="sample-badge map-badge"></span></div>
+            <div class="diff" id="diffBox"></div>
+            <div class="delta-row" id="deltaRow"></div>
+            <div style="font-size:11px;color:#9AA3AD;margin-top:8px" id="s8impact"></div>
+            <div class="primary-row" id="approveRow">
+              <button class="btn ghost" id="s8deny">再改改</button>
+              <button class="btn blue" id="s8allow">批准</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 调用日志抽屉 -->
+      <div class="log-sheet" id="logSheet">
+        <div class="log-head"><b>📜 调用日志</b><span id="logStat"></span><button class="ask-btn" id="logClose">关闭</button></div>
+        <div id="logBody"></div>
+      </div>
+
+      <div class="frag-sheet" id="fragSheet">
+        <div class="log-head"><b id="fragTitle">⏱ 碎片时间</b><span id="fragSub"></span><button class="ask-btn" id="fragClose">关闭</button></div>
+        <div class="map-pane" id="fragMap" style="height:300px;border-radius:14px;overflow:hidden;position:relative"><span class="sample-badge map-badge"></span></div>
+        <div id="fragWhy" class="frag-why"></div>
+        <div id="fragList"></div>
+      </div>
+
+      <div class="frag-sheet pool-sheet" id="poolSheet">
+        <div class="log-head"><b id="poolTitle">🚗 拼车接送</b><span id="poolSub"></span><button class="ask-btn" id="poolClose">关闭</button></div>
+        <div class="map-pane" id="poolMap" style="height:280px;border-radius:14px;overflow:hidden;position:relative"><span class="sample-badge map-badge"></span></div>
+        <div id="poolWhy" class="frag-why"></div>
+        <div id="poolBody"></div>
+      </div>
+      <div class="toast" id="toast"></div>
+    </main>
+
+    <div class="input-dock">
+      <div class="input-row">
+        <button class="plus" aria-label="添加">＋</button>
+        <input id="chatInput" placeholder="说一句目标">
+        <button class="send" id="sendBtn" aria-label="发送">↑</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <p class="foot-note" id="footNote">v1 · 后端代理百度地图 Web 服务 API（地理编码 / 地点检索 / 批量算路 / 路线规划）+ OpenAI 结构化输出；编排由确定性算法完成。徽章「示例数据」表示当前结果至少有一步用了示例数据。</p>
+
+  <script src="planner.js"></script>
+  <script src="carpool.js"></script>
+  <script src="slots.js"></script>
+  <script src="fragment.js"></script>
+  <script src="openplan.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

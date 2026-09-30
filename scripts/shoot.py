@@ -1,0 +1,72 @@
+"""headless Chrome 截图（需服务已启动）。用法：python3 scripts/shoot.py [http://localhost:8890] [文件名前缀]"""
+import pathlib, sys, json
+from playwright.sync_api import sync_playwright
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8890'
+PREFIX = sys.argv[2] if len(sys.argv) > 2 else ''
+OUT = ROOT / 'shots'; OUT.mkdir(exist_ok=True)
+errors = []
+with sync_playwright() as p:
+    # WebGL（百度 JS API GL）在 headless 下走 SwiftShader
+    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+    ctx = b.new_context(viewport={'width': 480, 'height': 1000}, device_scale_factor=2)
+    pg = ctx.new_page()
+    pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e)))
+    pg.on('console', lambda m: m.type == 'error' and errors.append('console: ' + m.text))
+    def mapidle():  # 百度地图瓦片加载完再截（SVG 底图立即返回）
+        try: pg.wait_for_function('!window.MapView || !MapView.idle || MapView.idle()', timeout=15000)
+        except Exception: errors.append('map tiles not idle before screenshot')
+        pg.wait_for_timeout(600 if pg.evaluate('!!window.__useBaidu') else 0)
+    def shot(name): mapidle(); pg.locator('#phoneWrap').screenshot(path=str(OUT / f'{PREFIX}{name}.png'))
+    def ready(): pg.wait_for_function('window.__ready === true', timeout=30000); pg.wait_for_timeout(500)
+    def names(): return pg.eval_on_selector_all('#timeline .tl-item .name', 'els => els.map(e => e.textContent)')
+
+    # 完整流程：首页 → 输入示例 → 任务理解 → 过程 → 酒店 → 雷达 → 总览 → 时间轴 → 变更 → 批准 → 拖拽
+    pg.goto(f'{BASE}/?shot=1#1'); ready()
+    pg.click('#homeChips .chip[data-i="0"]'); pg.wait_for_timeout(100)
+    shot('01-home')
+    pg.click('#sendBtn'); pg.wait_for_function("document.querySelectorAll('#taskList .check-item').length > 0", timeout=90000); pg.wait_for_timeout(200)
+    pg.evaluate("document.querySelector('#s2scroll').scrollTop = 0"); shot('02-task')
+    pg.evaluate("document.querySelector('#s2scroll').scrollTop = 9999"); pg.wait_for_timeout(100)
+    pg.click('#askRow .ask-btn[data-f="0"]'); pg.wait_for_timeout(150); shot('02b-task-followups')
+    pg.click('#s2go'); pg.wait_for_function("window.__app.S.pipelineDone === true", timeout=180000); pg.wait_for_timeout(300)
+    pg.evaluate("document.querySelector('#s3scroll').scrollTop = 0"); shot('03-process')
+    pg.evaluate("document.querySelector('#s3scroll').scrollTop = 99999"); pg.wait_for_timeout(100); shot('03b-process-end')
+    pg.click('.step-btn[data-step="4"]'); pg.wait_for_timeout(500); shot('04-hotels')
+    pg.evaluate("document.querySelector('#s4scroll').scrollTop = 9999"); pg.wait_for_timeout(100); shot('04b-hotels-compare')
+    pg.click('#hotelScroll .hotel-card.rec .pick'); pg.wait_for_function("document.querySelector('.screen.active').dataset.screen === '5'", timeout=60000); pg.wait_for_timeout(600)
+    shot('05-radar-2km')
+    pg.click('#radiusPills button[data-r="1"]'); pg.wait_for_timeout(400); shot('05b-radar-1km')
+    pg.click('#radiusPills button[data-r="3"]'); pg.wait_for_timeout(400)
+    pg.click('#catPills button[data-cat="bar"]'); pg.wait_for_timeout(600); shot('05c-radar-3km-bar')
+    pg.click('#radiusPills button[data-r="2"]'); pg.wait_for_timeout(300)
+    pg.click('#s5next'); pg.wait_for_timeout(700); shot('06-overview')
+    pg.evaluate("document.querySelector('#ovScroll').scrollTop = 9999"); pg.wait_for_timeout(100); shot('06b-overview-days')
+    pg.click('#dayCards .day-card[data-day="d1"]'); pg.wait_for_timeout(700); shot('07-itinerary')
+    pg.click('#dayPills button[data-day="d2"]'); pg.wait_for_timeout(500); shot('07b-itinerary-day2')
+    pg.click('#dayPills button[data-day="d1"]'); pg.wait_for_timeout(400)
+    pg.click('.step-btn[data-step="8"]'); pg.wait_for_function("window.__app.S.change && window.__app.S.change.stage === 'review'", timeout=90000); pg.wait_for_timeout(400)
+    shot('08-approval')
+    pg.evaluate("document.querySelector('#s8scroll').scrollTop = 9999"); pg.wait_for_timeout(100); shot('08b-approval-bottom')
+    pg.evaluate("(() => { const s = document.querySelector('#s8scroll'), m = document.querySelector('#changeMap'); s.scrollTop = m.offsetTop - s.offsetTop - 120; })()"); pg.wait_for_timeout(100); shot('08d-approval-map')
+    pg.click('#s8near .chip[data-i="1"]'); pg.wait_for_timeout(1000)
+    pg.evaluate("document.querySelector('#s8scroll').scrollTop = 9999"); pg.wait_for_timeout(100); shot('08c-approval-near-client')
+    pg.click('#s8near .chip[data-i="0"]'); pg.wait_for_timeout(1000)
+    pg.click('#s8allow'); pg.wait_for_timeout(900); shot('09-after-approval')
+    # HTML5 拖拽：把倒数第 2 项拖到倒数第 3 项上（先滚到可见），再分步移动鼠标（headless Chrome 需要）
+    pg.evaluate("(() => { const d = document.querySelector('#drawer'); const all = document.querySelectorAll('#timeline .tl-item'); const it = all[all.length - 3]; d.scrollTop = it.offsetTop - d.offsetTop - 8; })()"); pg.wait_for_timeout(150)
+    before = names()
+    items = pg.locator('#timeline .tl-item'); n = items.count()
+    bs = items.nth(n - 2).bounding_box(); bd = items.nth(n - 3).bounding_box()
+    pg.mouse.move(bs['x'] + 300, bs['y'] + 30); pg.mouse.down(); pg.mouse.move(bs['x'] + 300, bs['y'] + 10, steps=5)
+    pg.mouse.move(bd['x'] + 300, bd['y'] + 30, steps=25); pg.mouse.up(); pg.wait_for_timeout(700)
+    after = names(); shot('10-after-drag')
+    pg.click('#optBtn'); pg.wait_for_timeout(700); opt = names(); shot('10b-after-optimize')
+    pg.click('#dayPills button[data-day="plan"]'); pg.wait_for_timeout(800); shot('11-overview-after-change')
+    pg.click('#logBtn'); pg.wait_for_timeout(400); shot('12-call-log')
+    stat = pg.evaluate("(() => { const net = window.__app.S.log.filter(e => e.kind === 'api'); return { calls: net.length, mock: net.filter(e => e.mock).length, reasons: [...new Set(net.filter(e => e.mock).map(e => e.reason))], apis: [...new Set(net.map(e => e.api))] }; })()")
+    print('before drag :', before); print('after drag  :', after); print('after optim :', opt)
+    print('stats:', json.dumps(stat, ensure_ascii=False))
+    print('map:', 'Baidu GL' if pg.evaluate('!!window.__useBaidu') else 'SVG fallback')
+    b.close()
+print('errors:', errors or 'none')

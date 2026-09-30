@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小径·一句话地图任务助手</title>
+<style>
+body{margin:0;font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;background:#f4f7ff;color:#1b2440;line-height:1.7}
+main{max-width:960px;margin:0 auto;padding:24px 16px 48px}
+h1{color:#3370ff;margin:8px 0 4px}h2{margin-top:32px;font-size:20px}
+img,video{width:100%;border-radius:12px;box-shadow:0 6px 24px rgba(30,60,140,.15);background:#000}
+.intro{background:#fff;border-radius:12px;padding:16px 20px}
+ul{padding-left:20px}code{background:#e8eefc;padding:1px 5px;border-radius:4px}
+a{color:#3370ff}
+</style></head><body><main>
+<h1>小径·一句话地图任务助手</h1>
+<p>百度地图开发者创作大赛参赛作品 · 智慧出行</p>
+<img src="banner.png" alt="小径 banner">
+<h2>演示视频（真实运行录屏，约 1 分 46 秒）</h2>
+<video controls preload="metadata" playsinline poster="banner.png" src="demo.mp4"></video>
+<p><a href="demo.mp4">直接打开 / 下载 demo.mp4</a></p>
+<h2>作品简介</h2>
+<p class="intro">出行安排要兼顾客户地址、固定时间、空档和多人接送，手动查图算路费时。小径让用户说一句话，文心ERNIE（千帆）只把它填进锚点、时间、要找的东西、偏好、缺口五栏，追问和编排由代码决定，地点、路程、营业时间都来自百度地图。支持出差见客户、定时行程与空档处理、碎片时间推荐、拼车倒推下楼时间与分享页、开放式推荐。用到百度地图地点检索、地理编码、批量算路、路线规划（驾车/步行/公交）和JS API GL。</p>
+<h2>用到的百度地图 API</h2>
+<ul>
+<li>地点检索 <code>place/v2/search</code>：酒店、活动地点、任务雷达；点名地点核对</li>
+<li>地理编码 <code>geocoding/v3</code></li>
+<li>批量算路 <code>routematrix/v2</code>（步行 / 驾车 / 骑行）：酒店×地点通勤、拼车接人顺序</li>
+<li>路线规划 <code>direction/v2/driving</code>（含途经点）、<code>direction/v2/riding</code>、<code>directionlite/v1/walking</code>、<code>direction/v2/transit</code>（公交/地铁）</li>
+<li>JavaScript API GL：雷达圈、路线、计划总览、拼车地图</li>
+<li>大模型：千帆 v2 <code>chat/completions</code>（文心 <code>ernie-4.5-turbo-128k</code>，只做理解）；千帆「百度搜索」<code>ai_search/web_search</code>（开放式场景的近期活动，场馆再用百度地点检索核对）</li>
+</ul>
+<h2>代码</h2>
+<p><a href="https://github.com/bob0627/xiaojing">github.com/bob0627/xiaojing</a> · 运行方法见 README（Node ≥ 18，无第三方依赖；Key 只从环境变量读取，<code>MOCK=1</code> 可无 Key 走完流程）</p>
+</main></body></html>
